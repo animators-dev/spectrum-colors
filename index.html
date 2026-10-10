@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectrum Mega - 500+ Colors</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #4f46e5, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .counter {
+            font-weight: 600;
+            color: #4f46e5;
+        }
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-top: 0;
+        }
+        .search-wrapper {
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        #search {
+            width: 100%;
+            max-width: 600px;
+            padding: 16px 24px;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+            outline: none;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+        }
+        .color-box {
+            height: 140px;
+            width: 100%;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-panel {
+            padding: 16px;
+        }
+        .name {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .hex {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            z-index: 1000;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Spectrum Mega</h1>
+            <p class="subtitle">Exploring <span id="colorCount" class="counter">0</span> custom variations of the universe's colors.</p>
+        </header>
+
+        <div class="search-wrapper">
+            <input type="text" id="search" placeholder="Search colors (e.g., Red, White, Pink, #ff)..." oninput="filterColors()">
+        </div>
+
+        <div class="grid" id="colorGrid"></div>
+    </div>
+
+    <div id="toast" class="toast">Copied to clipboard!</div>
+
+    <script>
+        const colors = [];
+
+        // Main core color base with all primary and foundational choices included
+        const colorFamilies = [
+            { name: "Red", hue: 0 }, { name: "Orange", hue: 25 }, { name: "Yellow", hue: 55 },
+            { name: "Green", hue: 120 }, { name: "Teal", hue: 175 }, { name: "Cyan", hue: 195 },
+            { name: "Blue", hue: 225 }, { name: "Indigo", hue: 245 }, { name: "Purple", hue: 275 },
+            { name: "Pink", hue: 335 }, { name: "Magenta", hue: 315 }, { name: "Coral", hue: 12 },
+            { name: "Amber", hue: 42 }, { name: "Lime", hue: 85 }, { name: "Jade", hue: 145 },
+            { name: "Mint", hue: 160 }, { name: "Capri", hue: 205 }, { name: "Cobalt", hue: 218 },
+            { name: "Wisteria", hue: 295 }, { name: "Orchid", hue: 305 }, { name: "Flamingo", hue: 350 },
+            { name: "Lava", hue: 5 }
+        ];
+
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+        }
+
+        // 1. Loop to generate chromatic families (Red, Pink, Green, Yellow, etc.)
+        colorFamilies.forEach(family => {
+            const types = [
+                { prefix: "", sat: 90, light: 50 },
+                { prefix: "Cosmic ", sat: 65, light: 45 },
+                { prefix: "Electric ", sat: 100, light: 55 }
+            ];
+
+            const shades = [
+                { namePrefix: "Deepest ", lightMod: -32 },
+                { namePrefix: "Midnight ", lightMod: -20 },
+                { namePrefix: "Dark ", lightMod: -10 },
+                { namePrefix: "", lightMod: 0 },
+                { namePrefix: "Soft ", lightMod: 12 },
+                { namePrefix: "Light ", lightMod: 22 },
+                { namePrefix: "Pale ", lightMod: 32 }
+            ];
+
+            types.forEach(t => {
+                shades.forEach(s => {
+                    colors.push({
+                        name: `${s.namePrefix}${t.prefix}${family.name}`,
+                        hex: hslToHex(family.hue, t.sat, t.light + s.lightMod)
+                    });
+                });
+            });
+        });
+
+        // 2. Loop to build true Neutrals (Pure White, Pure Black, Grays)
+        const neutralNames = ["Black", "Gray", "White"];
+        neutralNames.forEach((name, index) => {
+            let baseLight = index === 0 ? 10 : index === 1 ? 50 : 90;
+            
+            const variations = [
+                { prefix: "Deepest ", mod: -10 },
+                { prefix: "Midnight ", mod: -6 },
+                { prefix: "Dark ", mod: -3 },
+                { prefix: "Pure ", mod: 0 },
+                { prefix: "Soft ", mod: 3 },
+                { prefix: "Light ", mod: 6 },
+                { prefix: "Pale ", mod: 10 }
+            ];
+
+            variations.forEach(v => {
+                let light = Math.max(0, Math.min(100, baseLight + v.mod));
+                // Hard overrides for the ultimate clear primary points
+                if (v.prefix === "Pure " && name === "Black") light = 0;
+                if (v.prefix === "Pure " && name === "White") light = 100;
+
+                colors.push({
+                    name: `${v.prefix}${name}`,
+                    hex: hslToHex(0, 0, light)
+                });
+            });
+        });
+
+        // Setup DOM nodes
+        const grid = document.getElementById('colorGrid');
+        const toast = document.getElementById('toast');
+        document.getElementById('colorCount').textContent = colors.length;
+
+        function displayColors(colorList) {
+            grid.innerHTML = "";
+            if(colorList.length === 0) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color: var(--text-muted);">No colors match.</p>`;
+                return;
+            }
+            colorList.forEach(color => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => {
+                    navigator.clipboard.writeText(color.hex);
+                    showToast(`Copied ${color.hex}!`);
+                };
+                card.innerHTML = `
+                    <div class="color-box" style="background-color: ${color.hex}"></div>
+                    <div class="info-panel">
+                        <div class="name">${color.name}</div>
+                        <div class="hex">${color.hex}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function filterColors() {
+            const query = document.getElementById('search').value.toLowerCase().trim();
+            const filtered = colors.filter(c => 
+                c.name.toLowerCase().includes(query) || 
+                c.hex.toLowerCase().includes(query)
+            );
+            displayColors(filtered);
+        }
+
+        colors.sort((a, b) => a.name.localeCompare(b.name));
+        displayColors(colors);
+    </script>
+</body>
+</html>
